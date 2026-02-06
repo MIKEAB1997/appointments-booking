@@ -11,6 +11,16 @@ import { rateLimit } from "@/lib/security";
  * 2. Business owner manually confirming
  */
 
+// Local type for booking with tenant relation
+interface BookingWithTenant {
+  id: string;
+  status: string;
+  booking_date: string;
+  booking_time: string;
+  confirmation_code: string | null;
+  tenants?: { name: string; slug: string } | null;
+}
+
 interface ConfirmBookingBody {
   confirmation_code?: string; // Required for customer self-confirmation
   confirmed_by?: "customer" | "business";
@@ -38,11 +48,13 @@ export async function POST(
     const body: ConfirmBookingBody = await request.json().catch(() => ({}));
 
     // Get existing booking
-    const { data: booking, error: fetchError } = await supabase
+    const { data: bookingData, error: fetchError } = await supabase
       .from("bookings")
       .select("*, tenants:tenant_id(name)")
       .eq("id", id)
       .single();
+
+    const booking = bookingData as BookingWithTenant | null;
 
     if (fetchError || !booking) {
       return NextResponse.json(
@@ -88,14 +100,16 @@ export async function POST(
     }
 
     // Update booking status to confirmed
+    const confirmUpdate = {
+      status: "confirmed" as const,
+      confirmed_at: new Date().toISOString(),
+      confirmed_by: body.confirmed_by ?? "customer",
+      updated_at: new Date().toISOString(),
+    };
+
     const { data: confirmedBooking, error: updateError } = await supabase
       .from("bookings")
-      .update({
-        status: "confirmed",
-        confirmed_at: new Date().toISOString(),
-        confirmed_by: body.confirmed_by ?? "customer",
-        updated_at: new Date().toISOString(),
-      })
+      .update(confirmUpdate as never)
       .eq("id", id)
       .select()
       .single();
@@ -147,12 +161,14 @@ export async function GET(
     const supabase = await createClient();
 
     // Get booking and validate code
-    const { data: booking, error: fetchError } = await supabase
+    const { data: bookingData, error: fetchError } = await supabase
       .from("bookings")
       .select("*, tenants:tenant_id(name, slug)")
       .eq("id", id)
       .eq("confirmation_code", code)
       .single();
+
+    const booking = bookingData as BookingWithTenant | null;
 
     if (fetchError || !booking) {
       return NextResponse.json(
@@ -178,14 +194,16 @@ export async function GET(
     }
 
     // Confirm the booking
+    const confirmUpdateGet = {
+      status: "confirmed" as const,
+      confirmed_at: new Date().toISOString(),
+      confirmed_by: "customer",
+      updated_at: new Date().toISOString(),
+    };
+
     const { error: updateError } = await supabase
       .from("bookings")
-      .update({
-        status: "confirmed",
-        confirmed_at: new Date().toISOString(),
-        confirmed_by: "customer",
-        updated_at: new Date().toISOString(),
-      })
+      .update(confirmUpdateGet as never)
       .eq("id", id);
 
     if (updateError) {

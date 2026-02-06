@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { rateLimit } from "@/lib/security";
 
 /**
  * Single Booking API Routes
@@ -8,6 +7,26 @@ import { rateLimit } from "@/lib/security";
  * PATCH /api/bookings/[id] - Update booking (reschedule, change status)
  * DELETE /api/bookings/[id] - Cancel booking
  */
+
+// Local types for booking data
+interface BookingWithRelations {
+  id: string;
+  tenant_id: string;
+  service_id: string;
+  staff_id: string | null;
+  status: string;
+  booking_date: string;
+  booking_time: string;
+  end_time: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  confirmation_code: string | null;
+  notes: string | null;
+  services?: { duration: number; duration_minutes?: number } | null;
+  tenants?: { id: string; name: string; slug: string } | null;
+  staff?: { id: string; name: string } | null;
+}
 
 interface UpdateBookingBody {
   status?: "pending" | "confirmed" | "cancelled" | "completed" | "no_show";
@@ -88,11 +107,13 @@ export async function PATCH(
     const body: UpdateBookingBody = await request.json();
 
     // Check if booking exists
-    const { data: existingBooking, error: fetchError } = await supabase
+    const { data: bookingData, error: fetchError } = await supabase
       .from("bookings")
-      .select("*, services:service_id(duration)")
+      .select("*, services:service_id(duration_minutes)")
       .eq("id", id)
       .single();
+
+    const existingBooking = bookingData as BookingWithRelations | null;
 
     if (fetchError || !existingBooking) {
       return NextResponse.json(
@@ -154,7 +175,7 @@ export async function PATCH(
       }
 
       // Calculate new end time
-      const serviceDuration = existingBooking.services?.duration ?? 60;
+      const serviceDuration = existingBooking.services?.duration_minutes ?? existingBooking.services?.duration ?? 60;
       const startTime = new Date(`${newDate}T${newTime}`);
       const endTime = new Date(startTime.getTime() + serviceDuration * 60000);
       const endTimeStr = endTime.toTimeString().slice(0, 5);
@@ -185,7 +206,7 @@ export async function PATCH(
     // Update booking
     const { data: updatedBooking, error: updateError } = await supabase
       .from("bookings")
-      .update(updates)
+      .update(updates as never)
       .eq("id", id)
       .select()
       .single();
@@ -229,11 +250,13 @@ export async function DELETE(
     const reason = url.searchParams.get("reason") ?? "Customer request";
 
     // Check if booking exists
-    const { data: existingBooking, error: fetchError } = await supabase
+    const { data: bookingToCancel, error: fetchError } = await supabase
       .from("bookings")
       .select("*")
       .eq("id", id)
       .single();
+
+    const existingBooking = bookingToCancel as BookingWithRelations | null;
 
     if (fetchError || !existingBooking) {
       return NextResponse.json(
@@ -262,14 +285,16 @@ export async function DELETE(
     }
 
     // Soft delete - update status to cancelled
+    const cancelUpdate = {
+      status: "cancelled" as const,
+      cancellation_reason: reason,
+      cancelled_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
     const { data: cancelledBooking, error: updateError } = await supabase
       .from("bookings")
-      .update({
-        status: "cancelled",
-        cancellation_reason: reason,
-        cancelled_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .update(cancelUpdate as never)
       .eq("id", id)
       .select()
       .single();

@@ -137,8 +137,12 @@ export interface Database {
           tenant_id: string;
           name: string;
           description: string | null;
+          // Duration fields - support both naming conventions
           duration_minutes: number;
+          duration: number | null;
           buffer_minutes: number;
+          buffer_before: number | null;
+          buffer_after: number | null;
           price: number | null;
           currency: string;
           max_participants: number;
@@ -152,7 +156,7 @@ export interface Database {
         };
         Insert: Omit<
           Database["public"]["Tables"]["services"]["Row"],
-          "id" | "created_at" | "updated_at"
+          "id" | "created_at" | "updated_at" | "duration" | "buffer_before" | "buffer_after"
         > & {
           id?: string;
           created_at?: string;
@@ -168,38 +172,85 @@ export interface Database {
           customer_id: string | null;
           staff_id: string | null;
           status: BookingStatus;
-          start_at: string;
-          end_at: string;
-          duration_minutes: number;
+          // Time fields - both formats supported
+          start_at: string | null;
+          end_at: string | null;
+          booking_date: string | null;
+          booking_time: string | null;
+          end_time: string | null;
+          duration_minutes: number | null;
+          // Customer/Guest info - both naming conventions supported
           guest_name: string | null;
           guest_email: string | null;
+          customer_name: string | null;
+          customer_email: string | null;
+          customer_phone: string | null;
+          // Confirmation/OTP
           otp_code: string | null;
+          confirmation_code: string | null;
           otp_expires_at: string | null;
-          otp_attempts: number;
-          recovery_sent: boolean;
+          otp_attempts: number | null;
+          recovery_sent: boolean | null;
           verified_at: string | null;
+          confirmed_at: string | null;
+          confirmed_by: string | null;
+          // Pending/Cancellation
           pending_expires_at: string | null;
           cancelled_at: string | null;
           cancel_reason: string | null;
-          is_late_cancel: boolean;
+          cancellation_reason: string | null;
+          is_late_cancel: boolean | null;
           rescheduled_from_id: string | null;
+          // Attendance
           checked_in_at: string | null;
-          points_awarded: number;
+          points_awarded: number | null;
+          // Other
           notes: string | null;
-          source: string;
+          source: string | null;
           ip_address: string | null;
+          price: number | null;
           created_at: string;
           updated_at: string;
+          // Relations (for joined queries)
+          tenants?: { name: string; slug: string } | null;
+          services?: { id: string; name: string; duration: number; price: number | null; color: string | null; buffer_before?: number; buffer_after?: number } | null;
+          staff?: { id: string; name: string } | null;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["bookings"]["Row"],
-          "id" | "created_at" | "updated_at"
-        > & {
+        Insert: {
           id?: string;
+          tenant_id: string;
+          service_id: string;
+          customer_id?: string | null;
+          staff_id?: string | null;
+          status?: BookingStatus;
+          start_at?: string | null;
+          end_at?: string | null;
+          booking_date?: string | null;
+          booking_time?: string | null;
+          end_time?: string | null;
+          duration_minutes?: number | null;
+          guest_name?: string | null;
+          guest_email?: string | null;
+          customer_name?: string | null;
+          customer_email?: string | null;
+          customer_phone?: string | null;
+          otp_code?: string | null;
+          confirmation_code?: string | null;
+          notes?: string | null;
+          price?: number | null;
           created_at?: string;
           updated_at?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["bookings"]["Insert"]>;
+        Update: {
+          status?: BookingStatus;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          cancelled_at?: string | null;
+          cancel_reason?: string | null;
+          cancellation_reason?: string | null;
+          updated_at?: string;
+          [key: string]: unknown;
+        };
       };
     };
     Views: Record<string, never>;

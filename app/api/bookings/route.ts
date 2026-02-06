@@ -1,12 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { validateEmail, validatePhone, validateName, rateLimit, generateCsrfToken } from "@/lib/security";
+import { validateEmail, validatePhone, validateName, rateLimit } from "@/lib/security";
+import type { Booking, Service } from "@/lib/supabase/types";
 
 /**
  * Booking API Routes
  * GET /api/bookings - List bookings (with filters)
  * POST /api/bookings - Create a new booking
  */
+
+// Local type for service with duration field
+type ServiceWithDuration = Service & { duration?: number };
 
 // Types for booking data
 interface CreateBookingBody {
@@ -200,13 +204,15 @@ export async function POST(request: Request) {
     }
 
     // Check for service existence and get duration
-    const { data: service, error: serviceError } = await supabase
+    const { data: serviceData, error: serviceError } = await supabase
       .from("services")
-      .select("id, duration, price, buffer_before, buffer_after")
+      .select("id, duration_minutes, price, buffer_minutes")
       .eq("id", body.service_id)
       .eq("tenant_id", body.tenant_id)
       .eq("is_active", true)
       .single();
+
+    const service = serviceData as { id: string; duration_minutes: number; price: number | null; buffer_minutes: number } | null;
 
     if (serviceError || !service) {
       return NextResponse.json(
@@ -217,7 +223,7 @@ export async function POST(request: Request) {
 
     // Calculate end time based on service duration
     const startTime = new Date(`${body.booking_date}T${body.booking_time}`);
-    const endTime = new Date(startTime.getTime() + service.duration * 60000);
+    const endTime = new Date(startTime.getTime() + service.duration_minutes * 60000);
     const endTimeStr = endTime.toTimeString().slice(0, 5);
 
     // Check for conflicting bookings
@@ -242,23 +248,25 @@ export async function POST(request: Request) {
     const confirmationCode = `NG${Date.now().toString().slice(-8)}`;
 
     // Create the booking
+    const bookingData = {
+      tenant_id: body.tenant_id,
+      service_id: body.service_id,
+      staff_id: body.staff_id ?? null,
+      customer_name: body.customer_name,
+      customer_email: body.customer_email,
+      customer_phone: body.customer_phone,
+      booking_date: body.booking_date,
+      booking_time: body.booking_time,
+      end_time: endTimeStr,
+      notes: body.notes ?? null,
+      status: "pending" as const,
+      confirmation_code: confirmationCode,
+      price: service.price,
+    };
+
     const { data: booking, error: createError } = await supabase
       .from("bookings")
-      .insert({
-        tenant_id: body.tenant_id,
-        service_id: body.service_id,
-        staff_id: body.staff_id ?? null,
-        customer_name: body.customer_name,
-        customer_email: body.customer_email,
-        customer_phone: body.customer_phone,
-        booking_date: body.booking_date,
-        booking_time: body.booking_time,
-        end_time: endTimeStr,
-        notes: body.notes ?? null,
-        status: "pending",
-        confirmation_code: confirmationCode,
-        price: service.price,
-      })
+      .insert(bookingData as never)
       .select()
       .single();
 

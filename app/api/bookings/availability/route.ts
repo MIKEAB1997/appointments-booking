@@ -26,6 +26,15 @@ interface BusinessHours {
   closeTime: string;
 }
 
+// Local type for service data from query
+interface ServiceData {
+  id: string;
+  name: string;
+  duration: number;
+  buffer_before: number | null;
+  buffer_after: number | null;
+}
+
 // Default business hours (will be fetched from DB in production)
 const DEFAULT_BUSINESS_HOURS: BusinessHours[] = [
   { day: 0, isOpen: true, openTime: "09:00", closeTime: "18:00" }, // Sunday
@@ -54,15 +63,19 @@ function generateTimeSlots(
     return slots;
   }
 
-  const [openHour, openMinute] = businessHours.openTime.split(":").map(Number);
-  const [closeHour, closeMinute] = businessHours.closeTime.split(":").map(Number);
+  const openParts = businessHours.openTime.split(":").map(Number);
+  const closeParts = businessHours.closeTime.split(":").map(Number);
+  const openHour = openParts[0] ?? 9;
+  const openMinute = openParts[1] ?? 0;
+  const closeHour = closeParts[0] ?? 18;
+  const closeMinute = closeParts[1] ?? 0;
 
   // Generate slots every 15 minutes
   const slotInterval = 15;
   const totalDuration = serviceDuration + bufferBefore + bufferAfter;
 
-  const startMinutes = openHour * 60 + (openMinute || 0);
-  const endMinutes = closeHour * 60 + (closeMinute || 0) - totalDuration;
+  const startMinutes = openHour * 60 + openMinute;
+  const endMinutes = closeHour * 60 + closeMinute - totalDuration;
 
   // Check if date is today and adjust start time
   const now = new Date();
@@ -159,13 +172,15 @@ export async function GET(request: Request) {
     const supabase = await createClient();
 
     // Get service details
-    const { data: service, error: serviceError } = await supabase
+    const { data: serviceData } = await supabase
       .from("services")
       .select("id, name, duration, buffer_before, buffer_after")
       .eq("id", serviceId)
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
       .single();
+
+    const service = serviceData as ServiceData | null;
 
     // For demo, use default service if not found
     const serviceDuration = service?.duration ?? 60;
@@ -193,7 +208,7 @@ export async function GET(request: Request) {
       bookingsQuery = bookingsQuery.eq("staff_id", staffId);
     }
 
-    const { data: existingBookings, error: bookingsError } = await bookingsQuery;
+    const { data: existingBookings } = await bookingsQuery;
 
     // For demo purposes, generate some mock blocked times based on date
     const demoBlockedTimes: Array<{ booking_time: string; end_time: string }> = [];
