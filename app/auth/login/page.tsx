@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Mail, ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+
+// Force dynamic rendering to avoid SSR issues with useSearchParams
+export const dynamic = 'force-dynamic';
 
 /**
  * Login Page
  * Route: /auth/login
  * Shows: Email magic link / OTP login form + Google OAuth
  */
-export default function LoginPage() {
+function LoginContent() {
   // Available for future redirect support
   void useSearchParams();
   const { signIn, signInWithGoogle } = useAuth();
@@ -221,5 +224,13 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">טוען...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
