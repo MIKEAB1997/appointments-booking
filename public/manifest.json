@@ -1,0 +1,42 @@
+{
+  "name": "NextGen - ניהול תורים וצמיחה עסקית",
+  "short_name": "NextGen",
+  "description": "מערכת SaaS לניהול תורים, נוכחות דיגיטלית ושימור לקוחות לעסקי כושר וביוטי",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait-primary",
+  "dir": "rtl",
+  "lang": "he",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "יומן",
+      "short_name": "יומן",
+      "url": "/calendar",
+      "icons": [{ "src": "/icon-calendar.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "לקוחות",
+      "short_name": "לקוחות",
+      "url": "/clients",
+      "icons": [{ "src": "/icon-clients.png", "sizes": "96x96" }]
+    }
+  ]
+}
