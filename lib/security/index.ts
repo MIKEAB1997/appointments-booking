@@ -352,3 +352,12 @@ export function validateBusinessForm(data: {
     errors,
   };
 }
+
+// ============================================================
+// Aliases for backward compatibility
+// ============================================================
+export const validateEmail = isValidEmail;
+export const validatePhone = isValidPhone;
+export const validateName = isValidName;
+export const rateLimit = isRateLimited;
+export const generateCsrfToken = generateCSRFToken;
