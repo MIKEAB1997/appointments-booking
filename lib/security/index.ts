@@ -356,8 +356,27 @@ export function validateBusinessForm(data: {
 // ============================================================
 // Aliases for backward compatibility
 // ============================================================
-export const validateEmail = isValidEmail;
-export const validatePhone = isValidPhone;
-export const validateName = isValidName;
-export const rateLimit = isRateLimited;
+
+// Validation wrapper functions that return objects with isValid and error
+export function validateEmail(email: string): { isValid: boolean; error?: string } {
+  const valid = isValidEmail(email);
+  return { isValid: valid, error: valid ? undefined : "נא להזין כתובת אימייל תקינה" };
+}
+
+export function validatePhone(phone: string): { isValid: boolean; error?: string } {
+  const valid = isValidPhone(phone);
+  return { isValid: valid, error: valid ? undefined : "נא להזין מספר טלפון ישראלי תקין" };
+}
+
+export function validateName(name: string): { isValid: boolean; error?: string } {
+  const valid = isValidName(name);
+  return { isValid: valid, error: valid ? undefined : "נא להזין שם תקין (2-50 תווים)" };
+}
+
+// Rate limit wrapper that returns object with allowed property
+export function rateLimit(key: string, maxRequests: number, windowMs: number): { allowed: boolean } {
+  const limited = isRateLimited(key, maxRequests, windowMs);
+  return { allowed: !limited };
+}
+
 export const generateCsrfToken = generateCSRFToken;
