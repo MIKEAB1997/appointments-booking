@@ -192,10 +192,10 @@ export default function BookingPage() {
   const currentStepIndex = steps.findIndex(s => s.id === step);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-24 lg:pb-8">
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-10">
-        <div className="container mx-auto max-w-2xl px-4 h-14 flex items-center">
+        <div className="container mx-auto max-w-6xl px-4 h-14 flex items-center">
           <Link
             href={step === "service" ? `/${tenant}` : "#"}
             onClick={(e) => {
@@ -213,8 +213,8 @@ export default function BookingPage() {
         </div>
       </header>
 
-      {/* Progress */}
-      <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3">
+      {/* Progress - Hidden on desktop, shown on mobile */}
+      <div className="lg:hidden bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3">
         <div className="container mx-auto max-w-2xl">
           <div className="flex items-center justify-between">
             {steps.map((s, i) => (
@@ -244,8 +244,11 @@ export default function BookingPage() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="container mx-auto max-w-2xl px-4 py-6">
+      {/* Main Content - 2 column layout on desktop */}
+      <div className="container mx-auto max-w-6xl px-4 py-6 lg:py-8">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+          {/* Main Content Area */}
+          <div className="lg:col-span-8">
 
         {/* Step 1: Select Service */}
         {step === "service" && (
@@ -462,13 +465,108 @@ export default function BookingPage() {
                 הפרטים שלך מאובטחים ומשמשים רק לצורך ניהול התור. לא נשתף את המידע עם צדדים שלישיים.
               </p>
             </div>
+
+            {/* Desktop Submit Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={!isDetailsValid || isSubmitting}
+              className="hidden lg:flex w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center gap-2 hover:shadow-xl transition-shadow"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  מאשר הזמנה...
+                </>
+              ) : (
+                <>
+                  <Check className="h-5 w-5" />
+                  אישור הזמנה
+                </>
+              )}
+            </button>
           </div>
         )}
+          </div>
+
+          {/* Desktop Sidebar - Booking Summary */}
+          <div className="hidden lg:block lg:col-span-4">
+            <div className="sticky top-20 space-y-4">
+              {/* Progress Steps - Desktop Version */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-800">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4">שלבי ההזמנה</h3>
+                <div className="space-y-4">
+                  {steps.map((s, i) => (
+                    <div key={s.id} className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                          i < currentStepIndex
+                            ? "bg-violet-500 text-white"
+                            : i === currentStepIndex
+                            ? "bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400 ring-2 ring-violet-500"
+                            : "bg-gray-100 dark:bg-slate-800 text-gray-400"
+                        }`}
+                      >
+                        {i < currentStepIndex ? <Check className="h-4 w-4" /> : i + 1}
+                      </div>
+                      <span className={`text-sm ${i <= currentStepIndex ? "text-gray-900 dark:text-white font-medium" : "text-gray-400"}`}>
+                        {s.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected Service Summary */}
+              {selectedService && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-800">
+                  <h3 className="font-bold text-gray-900 dark:text-white mb-4">סיכום הזמנה</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">{selectedService.name}</p>
+                        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{selectedService.duration} דקות</span>
+                        </div>
+                      </div>
+                      <p className="font-bold text-violet-600">₪{selectedService.price}</p>
+                    </div>
+
+                    {selectedDate && selectedTime && (
+                      <div className="pt-3 border-t border-gray-100 dark:border-slate-800">
+                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                          <Calendar className="h-4 w-4 text-violet-500" />
+                          <span>{formatDate(selectedDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mt-1">
+                          <Clock className="h-4 w-4 text-violet-500" />
+                          <span>שעה {selectedTime}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Need Help Card */}
+              <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-2xl p-5 border border-violet-100 dark:border-violet-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">צריכים עזרה?</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  צוות השירות שלנו זמין לסייע לכם בכל שאלה
+                </p>
+                <div className="flex items-center gap-2 text-sm text-violet-600 font-medium">
+                  <Phone className="h-4 w-4" />
+                  <span>03-1234567</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Fixed Bottom CTA */}
+      {/* Fixed Bottom CTA - Mobile only */}
       {step === "details" && (
-        <div className="fixed bottom-0 inset-x-0 p-4 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800">
+        <div className="lg:hidden fixed bottom-0 inset-x-0 p-4 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800">
           <div className="container mx-auto max-w-2xl">
             <button
               onClick={handleSubmit}
