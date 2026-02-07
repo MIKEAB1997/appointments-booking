@@ -2,18 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mail, ArrowLeft, Loader2, UserPlus, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Mail, ArrowLeft, Loader2, UserPlus, Check, Eye, EyeOff, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+
+type AuthMethod = "password" | "magic-link";
 
 /**
  * Register Page
  * Route: /auth/register
- * Shows: Customer registration form with Google OAuth + Email
+ * Shows: Customer registration form with Google OAuth + Email/Password
  */
 export default function RegisterPage() {
-  const { signIn, signInWithGoogle } = useAuth();
+  const router = useRouter();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
 
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("password");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +29,46 @@ export default function RegisterPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const validatePassword = () => {
+    if (password.length < 6) {
+      setError("הסיסמה חייבת להכיל לפחות 6 תווים");
+      return false;
+    }
+    if (password !== confirmPassword) {
+      setError("הסיסמאות אינן תואמות");
+      return false;
+    }
+    return true;
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validatePassword()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    // Store registration data in localStorage for profile completion
+    localStorage.setItem(
+      "pendingRegistration",
+      JSON.stringify({ fullName, phone, email })
+    );
+
+    const result = await signUp(email, password, fullName, phone);
+
+    setIsLoading(false);
+
+    if (result.success) {
+      setIsSuccess(true);
+    } else {
+      setError(result.error ?? "שגיאה בהרשמה. נסה שוב.");
+    }
+  };
+
+  const handleMagicLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
@@ -78,11 +125,19 @@ export default function RegisterPage() {
             <Mail className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-            בדוק את האימייל שלך
+            {authMethod === "password" ? "ההרשמה הושלמה!" : "בדוק את האימייל שלך"}
           </h1>
           <p className="text-gray-600 text-lg">
-            שלחנו קישור לאימות ל-<strong className="text-gray-800">{email}</strong>
+            {authMethod === "password"
+              ? "שלחנו לך אימייל לאימות החשבון"
+              : "שלחנו קישור לאימות ל-"}
+            {authMethod === "magic-link" && <strong className="text-gray-800">{email}</strong>}
           </p>
+          {authMethod === "password" && (
+            <p className="text-gray-500">
+              לחץ על הקישור באימייל כדי להפעיל את החשבון שלך
+            </p>
+          )}
           <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-emerald-100">
             <p className="text-sm text-gray-500">
               לא קיבלת? בדוק בתיקיית הספאם או{" "}
@@ -94,6 +149,12 @@ export default function RegisterPage() {
               </button>
             </p>
           </div>
+          <Link
+            href="/auth/login"
+            className="inline-block mt-4 text-emerald-600 hover:text-emerald-700 font-semibold"
+          >
+            חזור לדף ההתחברות
+          </Link>
         </div>
       </main>
     );
@@ -136,7 +197,7 @@ export default function RegisterPage() {
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
                 <Check className="w-4 h-4 text-emerald-600" />
               </div>
-              <span className="text-sm">תזכורות אוטומטיות לפני התור</span>
+              <span className="text-sm">צבירת נקודות והטבות בכל ביקור</span>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -183,12 +244,38 @@ export default function RegisterPage() {
               <div className="w-full border-t border-gray-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white/70 text-gray-500">או הירשם עם אימייל</span>
+              <span className="px-4 bg-white/70 text-gray-500">או</span>
             </div>
           </div>
 
-          {/* Email Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Auth Method Tabs */}
+          <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-xl">
+            <button
+              onClick={() => setAuthMethod("password")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                authMethod === "password"
+                  ? "bg-white text-gray-800 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <Lock className="h-4 w-4" />
+              עם סיסמה
+            </button>
+            <button
+              onClick={() => setAuthMethod("magic-link")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                authMethod === "magic-link"
+                  ? "bg-white text-gray-800 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <Mail className="h-4 w-4" />
+              קישור חד-פעמי
+            </button>
+          </div>
+
+          {/* Registration Form */}
+          <form onSubmit={authMethod === "password" ? handlePasswordSubmit : handleMagicLinkSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700">
                 שם מלא
@@ -240,6 +327,53 @@ export default function RegisterPage() {
               />
             </div>
 
+            {authMethod === "password" && (
+              <>
+                <div className="space-y-2">
+                  <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
+                    סיסמה
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="לפחות 6 תווים"
+                      required
+                      disabled={isLoading}
+                      className="w-full px-5 py-4 rounded-2xl border-2 border-gray-200 bg-white/50 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:opacity-50 transition-all duration-200 text-gray-800 placeholder:text-gray-400 pl-12"
+                      dir="ltr"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700">
+                    אימות סיסמה
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="הזן שוב את הסיסמה"
+                    required
+                    disabled={isLoading}
+                    className="w-full px-5 py-4 rounded-2xl border-2 border-gray-200 bg-white/50 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:opacity-50 transition-all duration-200 text-gray-800 placeholder:text-gray-400"
+                    dir="ltr"
+                  />
+                </div>
+              </>
+            )}
+
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                 <p className="text-sm text-red-600">{error}</p>
@@ -248,18 +382,18 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              disabled={isLoading || !email || !fullName || !phone}
+              disabled={isLoading || !email || !fullName || !phone || (authMethod === "password" && (!password || !confirmPassword))}
               className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-lg shadow-lg shadow-emerald-200/50 hover:shadow-xl hover:shadow-emerald-300/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  נרשם...
+                  {authMethod === "password" ? "נרשם..." : "שולח..."}
                 </>
               ) : (
                 <>
                   <UserPlus className="h-5 w-5" />
-                  צור חשבון
+                  {authMethod === "password" ? "צור חשבון" : "שלח קישור הרשמה"}
                 </>
               )}
             </button>
@@ -273,6 +407,19 @@ export default function RegisterPage() {
               className="text-emerald-600 hover:text-emerald-700 font-semibold underline underline-offset-2"
             >
               התחבר כאן
+            </Link>
+          </p>
+        </div>
+
+        {/* Business Owner Link */}
+        <div className="text-center">
+          <p className="text-gray-600 mb-2">
+            בעל עסק?{" "}
+            <Link
+              href="/auth/business/signup"
+              className="text-emerald-600 hover:text-emerald-700 font-semibold underline underline-offset-2"
+            >
+              הרשם כבעל עסק
             </Link>
           </p>
         </div>

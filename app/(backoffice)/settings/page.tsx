@@ -25,7 +25,9 @@ import {
   AlertCircle,
   Palette,
   Link as LinkIcon,
+  Image as ImageIcon,
 } from "lucide-react";
+import { ImageUpload, GalleryUpload } from "@/components/ui/image-upload";
 
 // Types
 interface BusinessProfile {
@@ -279,23 +281,34 @@ function ProfileSection({
         <div className="p-6 space-y-6">
           {/* Logo Upload */}
           <div className="flex items-center gap-6">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white text-3xl font-bold">
-                {profile.name[0]}
-              </div>
-              <button className="absolute -bottom-2 -left-2 w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center shadow-lg hover:bg-violet-700 transition-colors">
-                <Camera className="h-4 w-4" />
-              </button>
-            </div>
+            <ImageUpload
+              value={profile.logo}
+              onChange={(url) => setProfile({ ...profile, logo: url })}
+              bucket="business-assets"
+              folder="logos"
+              shape="square"
+              size="lg"
+              placeholder="לוגו"
+            />
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white">לוגו העסק</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                 PNG או JPG, מקסימום 2MB
               </p>
-              <button className="text-sm text-violet-600 hover:text-violet-700 font-medium">
-                העלה תמונה
-              </button>
             </div>
+          </div>
+
+          {/* Cover Image */}
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">תמונת רקע</h3>
+            <ImageUpload
+              value={profile.coverImage}
+              onChange={(url) => setProfile({ ...profile, coverImage: url })}
+              bucket="business-assets"
+              folder="covers"
+              shape="rectangle"
+              placeholder="העלה תמונת רקע"
+            />
           </div>
 
           {/* Business Name */}
